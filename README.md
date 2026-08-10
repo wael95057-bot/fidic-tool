@@ -1,1 +1,0 @@
-# fidic-tool

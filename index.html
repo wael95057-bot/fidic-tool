@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIDIC Time-Bar Risk & Notice Calculator</title>
+<style>
+:root{--primary:#0f172a;--accent:#0284c7;--danger:#dc2626;--warning:#d97706;--success:#16a34a;--bg:#f8fafc;--card:#fff;--text:#334155}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif}
+body{background:var(--bg);color:var(--text);padding:20px;line-height:1.6}.container{max-width:850px;margin:auto}
+header{background:var(--primary);color:#fff;padding:28px;border-radius:14px;text-align:center;box-shadow:0 6px 16px #00000012;margin-bottom:22px}
+header h1{font-size:clamp(1.35rem,4vw,2rem);color:#38bdf8;margin-bottom:7px}header p{color:#cbd5e1;font-size:.95rem}
+.card{background:var(--card);border-radius:12px;padding:22px;margin-bottom:18px;box-shadow:0 3px 10px #0000000b}
+.form-group{margin-bottom:16px}label{display:block;font-weight:700;margin-bottom:7px}
+select,input[type=date]{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:7px;font-size:1rem;background:#fff}
+.btn{background:var(--accent);color:#fff;border:0;padding:13px 18px;border-radius:7px;font-size:1rem;cursor:pointer;width:100%;font-weight:700}.btn:hover{background:#0369a1}
+.btn-copy{background:#059669;margin-top:4px}.btn-copy:hover{background:#047857}
+.btn-print{background:#475569;margin-top:10px}.btn-print:hover{background:#334155}
+.result-box{display:none;margin-top:0;border-top:2px dashed #e2e8f0;padding-top:20px}
+.badge{display:inline-block;padding:7px 13px;border-radius:20px;font-weight:800;font-size:.85rem;margin-bottom:12px}
+.badge-danger{background:#fee2e2;color:var(--danger)}.badge-warning{background:#fef3c7;color:var(--warning)}.badge-success{background:#dcfce7;color:var(--success)}
+.timer-display{font-size:1.15rem;font-weight:800;margin-bottom:12px}.clause-info{margin-bottom:16px;color:#64748b;font-size:.93rem}
+.template-preview{background:#f1f5f9;padding:16px;border-radius:7px;font-family:Consolas,monospace;font-size:.86rem;white-space:pre-wrap;max-height:330px;overflow:auto;border:1px solid #e2e8f0;margin:10px 0 15px}
+.note{font-size:.8rem;color:#64748b;margin-top:14px;text-align:center}
+@media print{body{background:#fff;padding:0}.no-print{display:none!important}header{box-shadow:none;margin:0 0 15px}.result-box{display:block!important}}
+</style>
+</head>
+<body>
+<div class="container">
+<header><h1>FIDIC Time-Bar Risk & Notice Tool</h1><p>The Proactive Contractual Shield Initiative | By Wael Ewis</p></header>
+<div class="card no-print">
+<div class="form-group"><label for="eventSelect">Select Site Event / Risk Type:</label>
+<select id="eventSelect" onchange="calculateRisk()">
+<option value="">-- Choose Event --</option>
+<option value="4.12">Unforeseeable Physical Conditions (Clause 4.12)</option>
+<option value="2.1">Delayed Access to Site (Clause 2.1)</option>
+<option value="1.9">Delayed Drawings / Submittals RFI (Clause 1.9)</option>
+<option value="13.1">Variations & Extra Works (Clause 13.1)</option>
+<option value="16.1">Suspension for Non-Payment 21-Day Notice (Clause 16.1)</option>
+<option value="8.4">Extension of Time EOT Claim Notice (Clause 20.1)</option>
+<option value="19.2">Force Majeure Event (Clause 19.2)</option>
+<option value="3.5">Notice of Dissatisfaction with Determination (Clause 3.5)</option>
+</select></div>
+<div class="form-group"><label for="eventDate">Date Event Occurred / Discovered:</label><input type="date" id="eventDate" onchange="calculateRisk()"></div>
+<button class="btn" onclick="calculateRisk()">Calculate Time-Bar & Generate Notice</button>
+</div>
+<div class="card"><div id="resultBox" class="result-box">
+<div id="badgeStatus" class="badge"></div><div id="timerDisplay" class="timer-display"></div>
+<div id="clauseInfo" class="clause-info"></div><label>Ready-to-Use Notice Template:</label>
+<div id="templateContent" class="template-preview"></div>
+<button class="btn btn-copy no-print" onclick="copyTemplate()">Copy Notice Text</button>
+<button class="btn btn-print no-print" onclick="window.print()">Print / Save as PDF</button>
+</div></div>
+<p class="note">Professional reference tool only. Always verify the applicable Contract Conditions, Particular Conditions, amendments, and governing law before issuing a contractual notice.</p>
+</div>
+<script>
+const eventData={
+"4.12":{clause:"FIDIC Clause 4.12 & 20.1",limitDays:28,desc:"Must notify within 28 days of encountering the physical condition.",template:`Subject: NOTICE OF UNFORESEEABLE PHYSICAL CONDITIONS
+Contract Reference: Clause 4.12 & 20.1
+
+Dear Engineer,
+
+We hereby give you formal notice pursuant to Clause 4.12 and 20.1 of the Contract. On [Event Date], we encountered physical conditions at [Location] which could not reasonably have been foreseen by an experienced contractor.
+
+We are keeping contemporary records and will submit full particulars within 42 days.
+
+Yours faithfully,
+[Contractor Name]`},
+"2.1":{clause:"FIDIC Clause 2.1",limitDays:28,desc:"Notify when access/handover requirements are not provided as required by the Contract.",template:`Subject: NOTICE OF DELAYED ACCESS TO SITE
+Contract Reference: Clause 2.1 & 20.1
+
+Dear Engineer,
+
+We refer to the agreed Project Programme where site handover was scheduled for [Date]. Regrettably, full access to [Zone] has not been provided as of today.
+
+This delay impacts our critical path. We reserve our rights to EOT and cost compensation.
+
+Yours faithfully,
+[Contractor Name]`},
+"1.9":{clause:"FIDIC Clause 1.9",limitDays:28,desc:"Notify when late drawings/submittals threaten the critical path, subject to the applicable Contract conditions.",template:`Subject: NOTICE OF DELAY IN ISSUING APPROVALS / DRAWINGS (RFI Ref: [No.])
+Contract Reference: Clause 1.9
+
+Dear Engineer,
+
+We refer to our submittal dated [Date]. As of today, required approvals have not been received, threatening our procurement and construction schedule.
+
+We request urgent action and reserve all contractual rights under Clause 1.9.
+
+Yours faithfully,
+[Contractor Name]`},
+"13.1":{clause:"FIDIC Clause 13.1 & 12.3",limitDays:14,desc:"Respond and notify promptly upon an instruction affecting scope, value, or time; verify the applicable notice requirements.",template:`Subject: NOTIFICATION REGARDING VARIATION ORDER
+Contract Reference: Clause 13.1 & 12.3
+
+Dear Engineer,
+
+We acknowledge your site instruction regarding [Description]. While we review technical impacts, this constitutes a Variation requiring appropriate valuation and assessment of time impact in accordance with the Contract.
+
+Yours faithfully,
+[Contractor Name]`},
+"16.1":{clause:"FIDIC Clause 16.1",limitDays:21,desc:"Check the Contract's specific notice and cure-period requirements before suspending Works.",template:`Subject: FORMAL NOTICE OF INTENTION TO SUSPEND WORKS
+Contract Reference: Clause 16.1
+
+Dear Employer,
+
+Due to persistent non-payment of IPC No. [No.] past the applicable due date under Clause 14.7, we hereby give notice of our intention to suspend Works if payment is not settled in accordance with the Contract.
+
+Yours faithfully,
+[Contractor Name]`},
+"8.4":{clause:"FIDIC Clause 20.1 & 8.4",limitDays:28,desc:"Check the applicable edition and Particular Conditions for the precise notice period and trigger.",template:`Subject: NOTICE OF CLAIM FOR EXTENSION OF TIME (EOT)
+Contract Reference: Clause 20.1 & 8.4
+
+Dear Engineer,
+
+On [Event Date], an event occurred beyond our control: [Description]. This impacts our critical path and completion date. We submit this notice within the applicable contractual notice period.
+
+Yours faithfully,
+[Contractor Name]`},
+"19.2":{clause:"FIDIC Clause 19.2",limitDays:14,desc:"Verify the applicable FIDIC edition and Particular Conditions for the notice trigger and deadline.",template:`Subject: URGENT NOTICE OF FORCE MAJEURE EVENT
+Contract Reference: Clause 19.2
+
+Dear Engineer,
+
+We give urgent notice of an exceptional event: [Description], occurring on [Date], preventing or affecting performance of our obligations. We are taking reasonable mitigation steps.
+
+Yours faithfully,
+[Contractor Name]`},
+"3.5":{clause:"FIDIC Clause 3.5 & 20.1",limitDays:14,desc:"Verify the applicable edition and dispute-resolution provisions for the precise notice period.",template:`Subject: FORMAL NOTICE OF DISSATISFACTION WITH ENGINEER’S DETERMINATION
+Contract Reference: Clause 3.5
+
+Dear Engineer,
+
+We received your determination dated [Date] regarding [Issue]. We hereby notify you of our formal DISSATISFACTION with this ruling, reserving our rights under the applicable dispute-resolution provisions of the Contract.
+
+Yours faithfully,
+[Contractor Name]`}
+};
+const dateInput=document.getElementById("eventDate");
+dateInput.value=new Date().toISOString().split("T")[0];
+function localDateOnly(v){const p=v.split("-").map(Number);return new Date(p[0],p[1]-1,p[2])}
+function formatDate(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function calculateRisk(){
+const key=document.getElementById("eventSelect").value,v=dateInput.value,box=document.getElementById("resultBox");
+if(!key||!v){box.style.display="none";return}
+const i=eventData[key],e=localDateOnly(v),t=new Date();t.setHours(0,0,0,0),d=new Date(e);d.setDate(d.getDate()+i.limitDays);
+const days=Math.ceil((d-t)/86400000),badge=document.getElementById("badgeStatus");
+document.getElementById("clauseInfo").innerHTML="<strong>Rule:</strong> "+i.desc+" | <strong>Contract Clause:</strong> "+i.clause;
+document.getElementById("templateContent").innerText=i.template.replaceAll("[Event Date]",v);
+if(days<0){badge.className="badge badge-danger";badge.innerText="TIME-BAR DEADLINE PASSED — CRITICAL RISK";document.getElementById("timerDisplay").innerHTML='<span style="color:var(--danger)">Expired by '+Math.abs(days)+' day(s). Deadline: '+formatDate(d)+'</span>'}
+else if(days<=5){badge.className="badge badge-warning";badge.innerText="WARNING — DEADLINE IS IMMINENT";document.getElementById("timerDisplay").innerHTML='<span style="color:var(--warning)">'+days+' day(s) remaining. Deadline: '+formatDate(d)+'</span>'}
+else{badge.className="badge badge-success";badge.innerText="WITHIN CALCULATED TIME WINDOW";document.getElementById("timerDisplay").innerHTML='<span style="color:var(--success)">'+days+' day(s) remaining. Deadline: '+formatDate(d)+'</span>'}
+box.style.display="block";
+}
+function copyTemplate(){navigator.clipboard.writeText(document.getElementById("templateContent").innerText).then(()=>alert("Notice template copied successfully."))}
+</script>
+</body>
+</html>
